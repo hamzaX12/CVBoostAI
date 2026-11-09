@@ -1,16 +1,15 @@
 """
-CVBoost AI — Landing Page
-Rendered as a full HTML page via st.components.v1.html with Tailwind CDN.
+CVBoost AI — Landing Page (Optimized)
+Rendered as an optimized, static CSS-backed page via st.components.v1.html.
+Precompiled styles, zero CDN runtime, preconnected fonts, memoized HTML.
 """
 from __future__ import annotations
 
+import os
+import sys
 import streamlit as st
-import sys, os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-
-from styles.theme import HIDE_STREAMLIT
-from components.api_client import submit_contact
 
 def _go_to_builder():
     for p in ["pages/2_Builder.py", "app/pages/2_Builder.py", "2_Builder"]:
@@ -45,6 +44,8 @@ html, body, .stApp, [data-testid="stAppViewContainer"], .main, section.main, .bl
     margin: 0 !important;
     padding-top: 0 !important;
     margin-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
     gap: 0 !important;
@@ -100,252 +101,156 @@ if hasattr(st, "html"):
           window.location.href = '/builder';
         }
       }
+      if (e.data && e.data.type === "set_height" && typeof e.data.height === "number") {
+        try {
+          const iframes = window.document.querySelectorAll("iframe");
+          iframes.forEach(function(iframe) {
+            iframe.style.height = e.data.height + "px";
+            iframe.setAttribute("height", e.data.height);
+            if (iframe.parentElement) {
+              iframe.parentElement.style.height = e.data.height + "px";
+            }
+          });
+        } catch (err) {}
+      }
     });
     </script>
     """, unsafe_allow_javascript=True)
 
 
-LANDING_HTML = """
-<!DOCTYPE html>
+@st.cache_data
+def get_landing_html() -> str:
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="CVBoost AI — AI-powered ATS CV builder. Upload your CV, target a job, and download an optimized PDF in minutes.">
 <title>CVBoost AI — Enhance your CV for better job chances</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        'primary-dark': '#09637E',
-        'primary': '#088395',
-        'accent': '#7AB2B2',
-        'surface': '#EBF4F6',
-      },
-      fontFamily: {
-        inter: ['Inter', 'system-ui', 'sans-serif'],
-      },
-    }
-  }
-}
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap">
 <style>
-  * { font-family: 'Inter', sans-serif; }
-  body { background: #EBF4F6; margin: 0; padding: 0; }
+/* Reset & Preflight */
+  *,::after,::before{box-sizing:border-box;border:0 solid #e5e7eb;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;tab-size:4;font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5}
+  body{margin:0;line-height:inherit;background:#EBF4F6;color:#111827}
+  a{color:inherit;text-decoration:inherit}
+  button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}
+  button,select{text-transform:none}
+  button,[type='button'],[type='reset'],[type='submit']{-webkit-appearance:button;background-color:transparent;background-image:none;cursor:pointer}
+  textarea{resize:vertical}
+  input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}
+
+  /* Core Utilities replacing Tailwind CDN */
+  .flex{display:flex}
+  .inline-block{display:inline-block}
+  .hidden{display:none}
+  .sticky{position:sticky}
+  .top-0{top:0}
+  .items-center{align-items:center}
+  .justify-between{justify-content:space-between}
+  .gap-2{gap:.5rem}
+  .gap-3{gap:.75rem}
+  .px-6{padding-left:1.5rem;padding-right:1.5rem}
+  .py-4{padding-top:1rem;padding-bottom:1rem}
+  .max-w-4xl{max-width:56rem}
+  .max-w-5xl{max-width:64rem}
+  .max-w-6xl{max-width:72rem}
+  .mx-auto{margin-left:auto;margin-right:auto}
+  .mb-14{margin-bottom:3.5rem}
+  .mt-12{margin-top:3rem}
+  .no-underline{text-decoration:none}
+  .text-center{text-align:center}
+  .text-white{color:#ffffff}
+  .text-gray-900{color:#111827}
+  @media (min-width: 768px){
+    .md\\:flex{display:flex!important}
+    .hidden.md\\:flex{display:flex!important}
+  }
+  @media (max-width: 767px){
+    .contact-grid{grid-template-columns:1fr!important;gap:24px!important}
+    .hidden.md\\:flex{display:none!important}
+  }
 
   /* Animations */
-  @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
-  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-10px); } }
-  @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-  @keyframes pulse-ring { 0% { transform:scale(0.95); box-shadow:0 0 0 0 rgba(8,131,149,0.4); } 70% { transform:scale(1); box-shadow:0 0 0 15px rgba(8,131,149,0); } 100% { transform:scale(0.95); } }
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+  @keyframes pulse-ring{0%{transform:scale(.95);box-shadow:0 0 0 0 rgba(8,131,149,.4)}70%{transform:scale(1);box-shadow:0 0 0 15px rgba(8,131,149,0)}100%{transform:scale(.95)}}
 
-  .fade-in-up { animation: fadeInUp 0.8s ease forwards; }
-  .delay-100 { animation-delay: 0.1s; opacity: 0; }
-  .delay-200 { animation-delay: 0.2s; opacity: 0; }
-  .delay-300 { animation-delay: 0.3s; opacity: 0; }
-  .delay-400 { animation-delay: 0.4s; opacity: 0; }
-  .float { animation: float 3s ease-in-out infinite; }
-  .pulse-btn { animation: pulse-ring 2s infinite; }
+  .fade-in-up{animation:fadeInUp .8s ease forwards}
+  .delay-100{animation-delay:.1s;opacity:0}
+  .delay-200{animation-delay:.2s;opacity:0}
+  .delay-300{animation-delay:.3s;opacity:0}
+  .delay-400{animation-delay:.4s;opacity:0}
+  .float{animation:float 3s ease-in-out infinite;will-change:transform}
+  .pulse-btn{animation:pulse-ring 2s infinite}
 
-  .gradient-text {
-    background: linear-gradient(135deg, #09637E 0%, #088395 50%, #7AB2B2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+  .gradient-text{background:linear-gradient(135deg,#09637E 0%,#088395 50%,#7AB2B2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .gradient-text-shimmer{background:linear-gradient(90deg,#09637E,#088395,#7AB2B2,#088395,#09637E);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite}
 
-  .gradient-text-shimmer {
-    background: linear-gradient(90deg, #09637E, #088395, #7AB2B2, #088395, #09637E);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: shimmer 4s linear infinite;
-  }
+  .hero-bg{background:radial-gradient(ellipse 90% 60% at 50% -10%, rgba(122,178,178,.35), transparent 75%),linear-gradient(135deg,#09637E 0%,#088395 45%,#0a9eb2 75%,#0F4C5C 100%);position:relative;overflow:hidden}
+  .hero-bg::before{content:'';position:absolute;top:-40%;right:-15%;width:650px;height:650px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.1) 0%,rgba(255,255,255,0) 70%);pointer-events:none!important}
+  .hero-bg::after{content:'';position:absolute;bottom:-25%;left:-10%;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(122,178,178,.15) 0%,rgba(122,178,178,0) 70%);pointer-events:none!important}
 
-  .hero-bg {
-    background: linear-gradient(135deg, #09637E 0%, #088395 40%, #0a9eb2 70%, #7AB2B2 100%);
-    position: relative;
-    overflow: hidden;
-  }
-  .hero-bg::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.06);
-    pointer-events: none !important;
-  }
-  .hero-bg::after {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -10%;
-    width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-    pointer-events: none !important;
-  }
+  .cta-nav-btn{background:linear-gradient(135deg,#088395,#7AB2B2);color:#fff;border:1px solid rgba(255,255,255,.3);font-weight:700;box-shadow:0 4px 16px rgba(8,131,149,.35);transition:all .25s ease;display:inline-flex;align-items:center}
+  .cta-nav-btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(122,178,178,.5);background:linear-gradient(135deg,#09637E,#088395)}
 
-  .glass-card {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(122,178,178,0.2);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(9,99,126,0.08);
-    transition: all 0.3s ease;
-  }
-  .glass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 48px rgba(9,99,126,0.16);
-    border-color: rgba(8,131,149,0.3);
-  }
+  .cta-secondary-btn:hover{background:rgba(255,255,255,.22)!important;border-color:rgba(255,255,255,.45)!important;transform:translateY(-2px)}
 
-  .feature-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #EBF4F6, #d4eef2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    margin-bottom: 16px;
-    transition: all 0.3s;
-  }
-  .glass-card:hover .feature-icon {
-    background: linear-gradient(135deg, #088395, #09637E);
-    transform: scale(1.1) rotate(5deg);
-  }
+  .hero-stat-card{background:rgba(255,255,255,.08);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:16px 24px;text-align:center;min-width:145px;transition:all .3s ease;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+  .hero-stat-card:hover{transform:translateY(-3px);background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32);box-shadow:0 10px 30px rgba(0,0,0,.14)}
+  .hero-stat-number{font-size:36px;font-weight:900;color:#fff;line-height:1;letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.15)}
+  .hero-stat-label{font-size:13px;color:rgba(255,255,255,.8);margin-top:6px;font-weight:500}
 
-  .step-number {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #088395, #09637E);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 18px;
-    flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(8,131,149,0.4);
-  }
+  .glass-card{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(122,178,178,.2);border-radius:20px;box-shadow:0 8px 32px rgba(9,99,126,.08);transition:all .3s ease}
+  .glass-card:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(9,99,126,.16);border-color:rgba(8,131,149,.3)}
 
-  .cta-btn {
-    background: linear-gradient(135deg, #088395, #09637E);
-    color: white;
-    padding: 16px 40px;
-    border-radius: 50px;
-    font-weight: 700;
-    font-size: 17px;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 32px rgba(8,131,149,0.4);
-    border: none;
-    cursor: pointer;
-  }
-  .cta-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 48px rgba(8,131,149,0.5);
-    background: linear-gradient(135deg, #09637E, #07707F);
-  }
+  .feature-icon{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#EBF4F6,#d4eef2);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;transition:all .3s}
+  .glass-card:hover .feature-icon{background:linear-gradient(135deg,#088395,#09637E);transform:scale(1.1) rotate(5deg)}
 
-  .nav-link {
-    color: rgba(255,255,255,0.85);
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 15px;
-    transition: color 0.2s;
-    padding: 6px 12px;
-    border-radius: 8px;
-  }
-  .nav-link:hover { color: white; background: rgba(255,255,255,0.1); }
+  .step-number{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#088395,#09637E);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0;box-shadow:0 4px 16px rgba(8,131,149,.4)}
 
-  .section-tag {
-    display: inline-block;
-    background: rgba(8,131,149,0.1);
-    color: #088395;
-    border: 1px solid rgba(8,131,149,0.2);
-    border-radius: 20px;
-    padding: 4px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    letter-spacing: 0.5px;
-  }
+  .cta-btn{background:linear-gradient(135deg,#088395,#09637E);color:#fff;padding:16px 40px;border-radius:50px;font-weight:700;font-size:17px;text-decoration:none;display:inline-flex;align-items:center;gap:10px;transition:all .3s ease;box-shadow:0 8px 32px rgba(8,131,149,.4);border:none;cursor:pointer}
+  .cta-btn:hover{transform:translateY(-2px);box-shadow:0 12px 48px rgba(8,131,149,.5);background:linear-gradient(135deg,#09637E,#07707F)}
 
-  .contact-input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1.5px solid rgba(122,178,178,0.4);
-    border-radius: 10px;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    outline: none;
-    background: white;
-    transition: border-color 0.2s;
-    color: #0F2A33;
-  }
-  .contact-input:focus { border-color: #088395; box-shadow: 0 0 0 3px rgba(8,131,149,0.1); }
+  .nav-link{color:rgba(255,255,255,.85);text-decoration:none;font-weight:500;font-size:15px;transition:color .2s;padding:6px 12px;border-radius:8px}
+  .nav-link:hover{color:#fff;background:rgba(255,255,255,.1)}
 
-  .footer-gradient {
-    background: linear-gradient(135deg, #09637E 0%, #07505f 100%);
-  }
+  .section-tag{display:inline-block;background:rgba(8,131,149,.1);color:#088395;border:1px solid rgba(8,131,149,.2);border-radius:20px;padding:4px 16px;font-size:13px;font-weight:600;margin-bottom:12px;letter-spacing:.5px}
 
-  /* Stats */
-  .stat-card {
-    text-align: center;
-    padding: 20px;
-  }
-  .stat-number {
-    font-size: 36px;
-    font-weight: 900;
-    color: white;
-    line-height: 1;
-  }
-  .stat-label {
-    font-size: 13px;
-    color: rgba(255,255,255,0.7);
-    margin-top: 4px;
-  }
+  .contact-input{width:100%;padding:12px 16px;border:1.5px solid rgba(122,178,178,.4);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;outline:none;background:#fff;transition:border-color .2s;color:#0F2A33}
+  .contact-input:focus{border-color:#088395;box-shadow:0 0 0 3px rgba(8,131,149,.1)}
+
+  .footer-gradient{background:linear-gradient(135deg,#09637E 0%,#07505f 100%)}
+
+  .stat-card{text-align:center;padding:20px}
+  .stat-number{font-size:36px;font-weight:900;color:#fff;line-height:1}
+  .stat-label{font-size:13px;color:rgba(255,255,255,.7);margin-top:4px}
+
+
 
   /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #EBF4F6; }
-  ::-webkit-scrollbar-thumb { background: #7AB2B2; border-radius: 3px; }
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:#EBF4F6}
+  ::-webkit-scrollbar-thumb{background:#7AB2B2;border-radius:3px}
 </style>
 </head>
-
 <body class="text-gray-900">
 
 <!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
-<nav class="sticky top-0" style="background:linear-gradient(135deg, #09637E 0%, #088395 100%);box-shadow:0 4px 20px rgba(9,99,126,0.3);position:relative;z-index:9999;">
+<nav class="sticky top-0" style="background:rgba(9, 99, 126, 0.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.12);box-shadow:0 8px 32px rgba(0,0,0,0.15);position:relative;z-index:9999;">
   <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between" style="position:relative;z-index:10000;">
     <a href="#" class="flex items-center gap-3 text-white no-underline" style="position:relative;z-index:10001;">
-      <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">🚀</div>
-      <div>
-        <div style="font-weight:800;font-size:18px;letter-spacing:-0.5px">CVBoost AI</div>
-        <div style="font-size:10px;opacity:0.7;letter-spacing:1px;text-transform:uppercase">AI-Powered CV Builder</div>
-      </div>
+      <div style="width:40px;height:40px;background:linear-gradient(135deg, rgba(255,255,255,0.25), rgba(122,178,178,0.25));border:1px solid rgba(255,255,255,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(8,131,149,0.3)">🚀</div>
+      <div style="font-weight:900;font-size:20px;letter-spacing:-0.5px;color:#ffffff">CVBoost <span style="color:#7AB2B2">AI</span></div>
     </a>
     <div class="hidden md:flex items-center gap-2" style="position:relative;z-index:10001;pointer-events:auto;">
       <a href="#" class="nav-link">Home</a>
       <a href="#learn-more" class="nav-link">Learn More</a>
       <a href="#contact" class="nav-link">Contact</a>
-      <button id="getStartedBtn" class="cta-btn" onclick="navigateToBuilder(event)" style="padding:10px 24px;font-size:14px;border-radius:30px;margin-left:8px;cursor:pointer!important;position:relative;z-index:10002;pointer-events:auto!important;">
+      <button id="getStartedBtn" class="cta-nav-btn" onclick="navigateToBuilder(event)" style="padding:10px 24px;font-size:14px;border-radius:30px;margin-left:10px;cursor:pointer!important;position:relative;z-index:10002;pointer-events:auto!important;">
         Get Started →
       </button>
     </div>
@@ -353,39 +258,56 @@ tailwind.config = {
 </nav>
 
 <!-- ═══════════════════════ HERO ═══════════════════════ -->
-<section class="hero-bg" style="padding:80px 24px 100px;position:relative;z-index:1">
-  <div class="max-w-4xl mx-auto text-center">
+<section class="hero-bg" style="padding:85px 24px 105px;position:relative;z-index:1">
+  <!-- Ambient Center Lighting Aura -->
+  <div style="position:absolute;top:15%;left:50%;transform:translateX(-50%);width:620px;height:360px;background:radial-gradient(ellipse at center, rgba(122,178,178,0.32) 0%, rgba(8,131,149,0.12) 50%, transparent 75%);filter:blur(50px);pointer-events:none;z-index:0;"></div>
 
-    <div class="float inline-block" style="font-size:64px;margin-bottom:20px">📄</div>
+  <div class="max-w-4xl mx-auto text-center" style="position:relative;z-index:2">
 
-    <div class="fade-in-up" style="display:inline-block;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:24px;padding:6px 20px;font-size:13px;font-weight:600;margin-bottom:20px;letter-spacing:0.5px">
-      ✨ Powered by AI
+    <!-- Glowing AI Pill Badge (No file icon, elevated modern styling) -->
+    <div class="fade-in-up" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.25);border-radius:30px;padding:8px 24px;margin-bottom:28px;box-shadow:0 4px 20px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.3)">
+      <span style="font-size:15px;line-height:1">✨</span>
+      <span style="color:#ffffff;font-size:13px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase">Powered by AI</span>
     </div>
 
-    <h1 class="fade-in-up delay-100 text-white" style="font-size:clamp(36px,6vw,64px);font-weight:900;line-height:1.1;margin-bottom:20px;letter-spacing:-1px">
+    <!-- Visually Enhanced Headline -->
+    <h1 class="fade-in-up delay-100" style="font-size:clamp(38px,6.5vw,66px);font-weight:900;line-height:1.12;margin-bottom:24px;letter-spacing:-1.5px;color:#ffffff">
       Enhance your CV for<br>
-      <span style="opacity:0.9">better job chances</span>
+      <span style="background:linear-gradient(135deg, #ffffff 0%, #cffafe 45%, #7AB2B2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 20px rgba(122,178,178,0.4))">better job chances</span>
     </h1>
 
-    <p class="fade-in-up delay-200 text-white" style="font-size:18px;opacity:0.85;max-width:580px;margin:0 auto 40px;line-height:1.6;font-weight:400">
+    <p class="fade-in-up delay-200" style="font-size:19px;color:rgba(255,255,255,0.92);max-width:620px;margin:0 auto 40px;line-height:1.65;font-weight:400;text-shadow:0 1px 4px rgba(0,0,0,0.2)">
       AI extracts your existing CV, analyzes real job requirements, and generates an ATS-optimized PDF — all in minutes.
     </p>
 
-    <div class="fade-in-up delay-300" style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
-      <button id="buildCvBtn" class="cta-btn pulse-btn" onclick="navigateToBuilder(event)">
+    <!-- Elevated CTA Buttons -->
+    <div class="fade-in-up delay-300" style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap">
+      <button id="buildCvBtn" class="cta-btn pulse-btn" onclick="navigateToBuilder(event)" style="background:linear-gradient(135deg,#088395 0%,#09637E 100%);padding:16px 42px;font-size:16px;border:1px solid rgba(255,255,255,0.3);box-shadow:0 8px 30px rgba(8,131,149,0.5), inset 0 1px 0 rgba(255,255,255,0.3)">
         🚀 Build My CV
       </button>
-      <a href="#learn-more" class="cta-btn" style="background:rgba(255,255,255,0.15);box-shadow:none;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.3)">
+      <a href="#learn-more" class="cta-secondary-btn" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#ffffff;padding:16px 36px;border-radius:50px;font-weight:600;font-size:16px;border:1px solid rgba(255,255,255,0.25);text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .3s ease">
         Learn More ↓
       </a>
     </div>
 
-    <!-- Stats bar -->
-    <div class="fade-in-up delay-400" style="display:flex;justify-content:center;gap:40px;margin-top:60px;flex-wrap:wrap">
-      <div class="stat-card"><div class="stat-number">95%</div><div class="stat-label">ATS Pass Rate</div></div>
-      <div class="stat-card"><div class="stat-number">3</div><div class="stat-label">Professional Templates</div></div>
-      <div class="stat-card"><div class="stat-number">50+</div><div class="stat-label">Skill Categories</div></div>
-      <div class="stat-card"><div class="stat-number">3</div><div class="stat-label">Languages (EN/FR/AR)</div></div>
+    <!-- Frosted Glass Stats Cards -->
+    <div class="fade-in-up delay-400" style="display:flex;justify-content:center;gap:20px;margin-top:64px;flex-wrap:wrap">
+      <div class="hero-stat-card">
+        <div class="hero-stat-number">95%</div>
+        <div class="hero-stat-label">ATS Pass Rate</div>
+      </div>
+      <div class="hero-stat-card">
+        <div class="hero-stat-number">3</div>
+        <div class="hero-stat-label">Professional Templates</div>
+      </div>
+      <div class="hero-stat-card">
+        <div class="hero-stat-number">50+</div>
+        <div class="hero-stat-label">Skill Categories</div>
+      </div>
+      <div class="hero-stat-card">
+        <div class="hero-stat-number">3</div>
+        <div class="hero-stat-label">Languages (EN/FR/AR)</div>
+      </div>
     </div>
   </div>
 </section>
@@ -564,24 +486,19 @@ tailwind.config = {
     </div>
   </div>
 </footer>
-
 <script>
 function navigateToBuilder(e) {
   if (e && e.preventDefault) e.preventDefault();
-
-  // Clean URL navigation directly to /builder
   try {
     const origin = (window.parent && window.parent.location) ? window.parent.location.origin : window.location.origin;
     window.parent.location.href = origin + '/builder';
     return;
   } catch (err) {}
-
   try {
     const origin = (window.top && window.top.location) ? window.top.location.origin : window.location.origin;
     window.top.location.href = origin + '/builder';
     return;
   } catch (err) {}
-
   window.location.href = '/builder';
 }
 
@@ -628,30 +545,77 @@ function submitContact(e) {
   });
 }
 
-// Observe scroll for animations
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.style.opacity = '1';
-      e.target.style.transform = 'translateY(0)';
-    }
+// Optimized IntersectionObserver that unobserves animated elements to free main thread
+if ('IntersectionObserver' in window) {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '50px' });
+
+  document.querySelectorAll('.glass-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+    observer.observe(el);
   });
-}, {threshold: 0.1});
+}
 
-document.querySelectorAll('.glass-card').forEach(el => {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(20px)';
-  el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-  observer.observe(el);
-});
+// Dynamic height adjustment to eliminate blank space after footer
+function updateIframeHeight() {
+  const footer = document.querySelector('footer');
+  let h = 0;
+  if (footer) {
+    const rect = footer.getBoundingClientRect();
+    h = Math.ceil(window.pageYOffset + rect.bottom);
+  } else {
+    h = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight
+    );
+  }
+  if (h > 100) {
+    try {
+      if (window.frameElement) {
+        window.frameElement.style.height = h + 'px';
+        window.frameElement.setAttribute('height', h);
+        if (window.frameElement.parentElement) {
+          window.frameElement.parentElement.style.height = h + 'px';
+        }
+      }
+    } catch(err) {}
+    try {
+      if (window.parent) {
+        window.parent.postMessage({ type: 'set_height', height: h }, '*');
+      }
+    } catch(err) {}
+  }
+}
+
+window.addEventListener('DOMContentLoaded', updateIframeHeight);
+window.addEventListener('load', updateIframeHeight);
+window.addEventListener('resize', updateIframeHeight);
+if ('ResizeObserver' in window) {
+  const ro = new ResizeObserver(() => {
+    updateIframeHeight();
+  });
+  ro.observe(document.body);
+}
+setTimeout(updateIframeHeight, 50);
+setTimeout(updateIframeHeight, 200);
+setTimeout(updateIframeHeight, 600);
+setTimeout(updateIframeHeight, 1500);
 </script>
-
 </body>
-</html>
-"""
+</html>"""
 
-# Render the full landing page
-st.components.v1.html(LANDING_HTML, height=4000, scrolling=True)
+
+# Render the full landing page using cached HTML
+st.components.v1.html(get_landing_html(), height=2450, scrolling=False)
 
 # Handle navigation (if user clicked "Build My CV")
 if st.session_state.get("navigate_to_builder"):

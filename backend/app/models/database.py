@@ -14,6 +14,8 @@ engine = create_async_engine(
     settings.database_url,
     echo=settings.is_development,
     future=True,
+    pool_pre_ping=True,
+    **({} if "sqlite" in settings.database_url else {"pool_size": 10, "max_overflow": 20}),
     connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
 )
 

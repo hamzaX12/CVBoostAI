@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" {% if is_rtl %}dir="rtl"{% endif %}>
+<head>
+<meta charset="UTF-8">
+<meta name="description" content="{{ cv.personal.headline }} - CV">
+<title>{{ cv.personal.first_name }} {{ cv.personal.last_name }} - CV</title>
+<style>
+/* ── Reset & Base ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@import url('https://fonts.googleapis.com/css2?family={{ font | replace(" ", "+") }}:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --sidebar-bg: {{ colors.sidebar_bg }};
+  --sidebar-text: {{ colors.sidebar_text }};
+  --heading-color: {{ colors.heading_color }};
+  --accent: {{ colors.accent_color }};
+  --body-text: {{ colors.body_text }};
+  --bg: {{ colors.background }};
+  --font: '{{ font }}', Arial, sans-serif;
+  --body-size: {{ spacing.body_size }};
+  --heading-size: {{ spacing.heading_size }};
+  --section-gap: {{ spacing.section_gap }};
+  --line-height: {{ spacing.line_height }};
+  --sidebar-width: {{ sidebar_width }}%;
+  --main-width: {{ 100 - sidebar_width }}%;
+}
+
+html, body {
+  font-family: var(--font);
+  font-size: var(--body-size);
+  color: var(--body-text);
+  background: var(--bg);
+  line-height: var(--line-height);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── Page & Layout ───────────────────────────────────────────────────── */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  display: flex;
+  flex-direction: {% if sidebar_pos == 'right' %}row-reverse{% else %}row{% endif %};
+  page-break-after: always;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  padding: 38px 18px 28px 18px;
+  flex-shrink: 0;
+}
+
+.main {
+  width: var(--main-width);
+  background: var(--bg);
+  padding: 28px 22px 20px 22px;
+  flex: 1;
+}
+
+/* ── ATS Safe Mode: single column ────────────────────────────────────── */
+{% if ats_safe %}
+.page { flex-direction: column; }
+.sidebar { width: 100%; background: var(--bg); color: var(--body-text); padding: 10px 22px; border-bottom: 2px solid var(--heading-color); }
+.main { width: 100%; }
+{% endif %}
+
+/* ── Photo ───────────────────────────────────────────────────────────── */
+.photo-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+{% if not ats_safe %}
+.photo-wrap img {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  object-position: 50% 35%;
+  {% if photo_shape == 'circle' %}
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.7);
+  {% elif photo_shape == 'square' %}
+  border-radius: 6px;
+  border: 3px solid rgba(255,255,255,0.7);
+  {% endif %}
+}
+{% endif %}
+
+/* ── Sidebar sections ────────────────────────────────────────────────── */
+.sidebar-section { margin-bottom: var(--section-gap); }
+
+.sidebar-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--sidebar-text);
+  opacity: 0.75;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.sidebar-item {
+  font-size: calc(var(--body-size) - 1px);
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+.sidebar-item a {
+  color: var(--sidebar-text);
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+/* ── Contact icons ───────────────────────────────────────────────────── */
+.contact-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: calc(var(--body-size) - 0.5px);
+}
+.contact-row .icon {
+  opacity: 0.7;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+  font-style: normal;
+}
+
+/* ── Language dots ───────────────────────────────────────────────────── */
+.lang-item {
+  margin-bottom: 8px;
+}
+.lang-name {
+  font-size: var(--body-size);
+  margin-bottom: 3px;
+  font-weight: 500;
+}
+.lang-dots {
+  display: flex;
+  gap: 4px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+.dot.filled {
+  background: var(--sidebar-text);
+  border-color: var(--sidebar-text);
+}
+
+/* ── Skill groups ────────────────────────────────────────────────────── */
+.skill-category {
+  font-weight: 600;
+  font-size: calc(var(--body-size) - 0.5px);
+  margin-bottom: 3px;
+  margin-top: 6px;
+  opacity: 0.9;
+}
+.skill-list {
+  font-size: calc(var(--body-size) - 0.5px);
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+/* ── Main column ─────────────────────────────────────────────────────── */
+.name-block {
+  margin-bottom: 14px;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 10px;
+}
+
+.candidate-name {
+  font-size: 22px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--heading-color);
+  letter-spacing: 1.5px;
+  line-height: 1.2;
+}
+
+.candidate-headline {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ── Section headers ─────────────────────────────────────────────────── */
+.section { margin-bottom: var(--section-gap); page-break-inside: avoid; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--heading-color);
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: var(--heading-size);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--heading-color);
+}
+
+/* ── Entry (education / project / experience) ────────────────────────── */
+.entry {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+}
+
+.entry-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 16px;
+}
+
+.entry-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--heading-color);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.entry-line {
+  width: 1px;
+  flex: 1;
+  background: var(--accent);
+  opacity: 0.4;
+  margin-top: 2px;
+}
+
+.entry-content { flex: 1; }
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2px;
+}
+
+.entry-title {
+  font-weight: 700;
+  font-size: var(--body-size);
+  color: var(--heading-color);
+}
+
+.entry-date {
+  font-size: calc(var(--body-size) - 1px);
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.entry-org {
+  font-style: italic;
+  font-size: calc(var(--body-size) - 0.5px);
+  color: var(--body-text);
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
+.entry-location {
+  font-size: calc(var(--body-size) - 1px);
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+
+.bullets { padding-left: 12px; margin-top: 4px; }
+.bullets li {
+  font-size: var(--body-size);
+  margin-bottom: 2px;
+  line-height: var(--line-height);
+  list-style-type: disc;
+}
+
+/* ── Summary ─────────────────────────────────────────────────────────── */
+.summary-text {
+  font-size: var(--body-size);
+  line-height: var(--line-height);
+  color: var(--body-text);
+  text-align: justify;
+}
+
+/* ── Page break handling ─────────────────────────────────────────────── */
+.entry { break-inside: avoid; }
+.section { break-inside: avoid; }
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+/* ── Print ───────────────────────────────────────────────────────────── */
+@media print {
+  html, body { height: 297mm; width: 210mm; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside class="sidebar" role="complementary" aria-label="{{ titles.contact }}">
+
+    <!-- Photo -->
+    {% if cv.personal.photo_url and not ats_safe %}
+    <div class="photo-wrap">
+      <img src="{{ cv.personal.photo_url }}" alt="{{ cv.personal.first_name }} {{ cv.personal.last_name }}" aria-hidden="false">
+    </div>
+    {% endif %}
+
+    <!-- Contact -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">{{ titles.contact }}</div>
+      {% if cv.personal.email %}
+      <div class="contact-row">
+        <span class="icon" aria-hidden="true">✉</span>
+        <span>{{ cv.personal.email }}</span>
+      </div>
+      {% endif %}
+      {% if cv.personal.phone %}
+      <div class="contact-row">
+        <span class="icon" aria-hidden="true">✆</span>
+        <span>{{ cv.personal.phone }}</span>
+      </div>
+      {% endif %}
+      {% if cv.personal.city or cv.personal.address %}
+      <div class="contact-row">
+        <span class="icon" aria-hidden="true">⌖</span>
+        <span>{% if cv.personal.address %}{{ cv.personal.address }}, {% endif %}{{ cv.personal.city }}{% if cv.personal.country %}, {{ cv.personal.country }}{% endif %}</span>
+      </div>
+      {% endif %}
+      {% if cv.personal.linkedin %}
+      <div class="contact-row">
+        <span class="icon" aria-hidden="true">in</span>
+        <a href="{{ cv.personal.linkedin }}">{{ cv.personal.linkedin | replace("https://linkedin.com/in/","") | replace("https://www.linkedin.com/in/","") }}</a>
+      </div>
+      {% endif %}
+      {% if cv.personal.website %}
+      <div class="contact-row">
+        <span class="icon" aria-hidden="true">🌐</span>
+        <a href="{{ cv.personal.website }}">{{ cv.personal.website | replace("https://","") | replace("http://","") }}</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Skills -->
+    {% if cv.skills %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">{{ titles.skills }}</div>
+      {% for group in cv.skills %}
+      <div class="skill-category">{{ group.category }}</div>
+      <div class="skill-list">{{ group.items | join(", ") }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Languages -->
+    {% if cv.languages %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">{{ titles.languages }}</div>
+      {% for lang_entry in cv.languages %}
+      <div class="lang-item">
+        <div class="lang-name">{{ lang_entry.name }}</div>
+        <div class="lang-dots" aria-label="{{ lang_entry.name }}: {{ lang_entry.level.value }}">
+          {% set filled = language_dots[lang_entry.level] %}
+          {% for i in range(5) %}
+          <div class="dot {% if i < filled %}filled{% endif %}"></div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Hobbies -->
+    {% if cv.hobbies and 'hobbies' in sections_order %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">{{ titles.hobbies }}</div>
+      <div class="skill-list">{{ cv.hobbies | join(" • ") }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Optional extras -->
+    {% if cv.personal.driving_licence %}
+    <div class="sidebar-section">
+      <div class="sidebar-title">Driving Licence</div>
+      <div class="sidebar-item">{{ cv.personal.driving_licence }}</div>
+    </div>
+    {% endif %}
+
+  </aside>
+
+  <!-- ═══════════════════ MAIN COLUMN ═══════════════════ -->
+  <main class="main" role="main">
+
+    <!-- Name + Headline -->
+    <div class="name-block">
+      <div class="candidate-name">{{ cv.personal.first_name }}<br>{{ cv.personal.last_name }}</div>
+      {% if cv.personal.headline and cv.personal.use_headline %}
+      <div class="candidate-headline">{{ cv.personal.headline }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Dynamic sections in user-defined order -->
+    {% for section_key in sections_order %}
+
+      {% if section_key == 'profile' and cv.summary %}
+      <section class="section" aria-label="{{ titles.profile }}">
+        <div class="section-header">
+          <div class="section-dot" aria-hidden="true"></div>
+          <h2 class="section-title">{{ titles.profile }}</h2>
+        </div>
+        <p class="summary-text">{{ cv.summary }}</p>
+      </section>
+      {% endif %}
+
+      {% if section_key == 'education' and cv.education %}
+      <section class="section" aria-label="{{ titles.education }}">
+        <div class="section-header">
+          <div class="section-dot" aria-hidden="true"></div>
+          <h2 class="section-title">{{ titles.education }}</h2>
+        </div>
+        {% for edu in cv.education %}
+        <div class="entry">
+          <div class="entry-timeline">
+            <div class="entry-dot"></div>
+            <div class="entry-line"></div>
+          </div>
+          <div class="entry-content">
+            <div class="entry-header">
+              <div class="entry-title">{{ edu.degree }}</div>
+              <div class="entry-date">
+                {{ edu.start_date }}{% if edu.start_date and (edu.end_date or edu.current) %} – {% endif %}{% if edu.current %}Present{% else %}{{ edu.end_date }}{% endif %}
+              </div>
+            </div>
+            <div class="entry-org">{{ edu.institution }}</div>
+            {% if edu.location %}<div class="entry-location">{{ edu.location }}</div>{% endif %}
+            {% if edu.gpa %}<div class="entry-location">GPA: {{ edu.gpa }}</div>{% endif %}
+            {% if edu.description %}
+            <ul class="bullets">
+              {% for bullet in edu.description %}
+              <li>{{ bullet.text }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if section_key == 'experience' and cv.experience %}
+      <section class="section" aria-label="{{ titles.experience }}">
+        <div class="section-header">
+          <div class="section-dot" aria-hidden="true"></div>
+          <h2 class="section-title">{{ titles.experience }}</h2>
+        </div>
+        {% for exp in cv.experience %}
+        <div class="entry">
+          <div class="entry-timeline">
+            <div class="entry-dot"></div>
+            <div class="entry-line"></div>
+          </div>
+          <div class="entry-content">
+            <div class="entry-header">
+              <div class="entry-title">{{ exp.job_title }}</div>
+              <div class="entry-date">
+                {{ exp.start_date }}{% if exp.start_date and (exp.end_date or exp.current) %} – {% endif %}{% if exp.current %}Present{% else %}{{ exp.end_date }}{% endif %}
+              </div>
+            </div>
+            <div class="entry-org">{{ exp.company }}</div>
+            {% if exp.location %}<div class="entry-location">{{ exp.location }}</div>{% endif %}
+            {% if exp.description %}
+            <ul class="bullets">
+              {% for bullet in exp.description %}
+              <li>{{ bullet.text }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if section_key == 'projects' and cv.projects %}
+      <section class="section" aria-label="{{ titles.projects }}">
+        <div class="section-header">
+          <div class="section-dot" aria-hidden="true"></div>
+          <h2 class="section-title">{{ titles.projects }}</h2>
+        </div>
+        {% for proj in cv.projects %}
+        <div class="entry">
+          <div class="entry-timeline">
+            <div class="entry-dot"></div>
+            <div class="entry-line"></div>
+          </div>
+          <div class="entry-content">
+            <div class="entry-header">
+              <div class="entry-title">{{ proj.title }}</div>
+              <div class="entry-date">
+                {{ proj.start_date }}{% if proj.start_date and (proj.end_date or proj.current) %} – {% endif %}{% if proj.current %}Present{% else %}{{ proj.end_date }}{% endif %}
+              </div>
+            </div>
+            {% if proj.role or proj.organization %}
+            <div class="entry-org">{% if proj.role %}{{ proj.role }}{% if proj.organization %} @ {% endif %}{% endif %}{{ proj.organization }}</div>
+            {% endif %}
+            {% if proj.location %}<div class="entry-location">{{ proj.location }}</div>{% endif %}
+            {% if proj.technologies %}
+            <div class="entry-location"><strong>Tech:</strong> {{ proj.technologies | join(", ") }}</div>
+            {% endif %}
+            {% if proj.description %}
+            <ul class="bullets">
+              {% for bullet in proj.description %}
+              <li>{{ bullet.text }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if section_key == 'certificates' and cv.certificates %}
+      <section class="section" aria-label="{{ titles.certificates }}">
+        <div class="section-header">
+          <div class="section-dot" aria-hidden="true"></div>
+          <h2 class="section-title">{{ titles.certificates }}</h2>
+        </div>
+        {% for cert in cv.certificates %}
+        <div class="entry">
+          <div class="entry-timeline">
+            <div class="entry-dot"></div>
+            <div class="entry-line"></div>
+          </div>
+          <div class="entry-content">
+            <div class="entry-header">
+              <div class="entry-title">{{ cert.name }}</div>
+              <div class="entry-date">{{ cert.date }}</div>
+            </div>
+            {% if cert.issuer %}<div class="entry-org">{{ cert.issuer }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if section_key == 'skills' and cv.skills and ats_safe %}
+      {# In ATS-safe mode, also show skills in the main column as plain text #}
+      <section class="section" aria-label="{{ titles.skills }}">
+        <div class="section-header">
+          <div class="section-dot" aria-hidden="true"></div>
+          <h2 class="section-title">{{ titles.skills }}</h2>
+        </div>
+        {% for group in cv.skills %}
+        <div><strong>{{ group.category }}:</strong> {{ group.items | join(", ") }}</div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% for custom in cv.custom_sections %}
+        {% if section_key == 'custom_' + custom.id and not custom.hidden %}
+        <section class="section">
+          <div class="section-header">
+            <div class="section-dot" aria-hidden="true"></div>
+            <h2 class="section-title">{{ custom.title }}</h2>
+          </div>
+          {% if custom.items %}
+          <ul class="bullets">
+            {% for item in custom.items %}
+            <li>{{ item.text }}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </section>
+        {% endif %}
+      {% endfor %}
+
+    {% endfor %}
+
+  </main>
+</div>
+</body>
+</html>

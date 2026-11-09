@@ -1,0 +1,505 @@
+CVBoost AI — Project Explanation
+================================
+
+Tagline: "Enhance your CV for better job chances"
+
+This document explains what CVBoost AI is, how the codebase is organized, how each
+part works, and how a user actually uses the product. It is based on reading the
+project source files (Python backend, Streamlit frontend, templates, Docker, tests).
+
+
+1. WHAT THIS PROJECT IS
+-----------------------
+
+CVBoost AI is an AI-powered CV (resume) builder. A user can:
+
+  - Open a marketing-style landing page
+  - Enter a CV builder that looks like CVwizard (split editor + live preview)
+  - Fill personal details, education, projects, skills, languages, hobbies
+  - Optionally upload an existing PDF/DOCX so Gemini extracts structured data
+  - Type a target job so an agent searches the web and suggests ranked skills
+  - Download an ATS-oriented PDF (real text layer, not a scanned image)
+  - Check a PDF for ATS-style compliance (heuristic score 0-100)
+  - Ask AI to rewrite a bullet with stronger action verbs (user must accept it)
+
+Author: CVBoost AI Team.
+
+The product is a two-process web app:
+
+  Frontend  Streamlit on port 8501
+  Backend   FastAPI on port 8000
+  Database  SQLite by default (cvboost.db), PostgreSQL-ready via DATABASE_URL
+  AI        Google Gemini (default model in .env.example: gemini-2.5-flash)
+  Search    Tavily if TAVILY_API_KEY is set, otherwise DuckDuckGo
+
+
+2. HIGH-LEVEL ARCHITECTURE
+--------------------------
+
+  Browser
+     |
+     v
+  Streamlit UI  (landing + builder)
+     |  HTTP + SSE (Server-Sent Events)
+     v
+  FastAPI  /api/v1/...
+     |-- Auth (JWT, Argon2, cookies)
+     |-- CV CRUD, extract, PDF, ATS, improve-bullet
+     |-- Job analysis agent (streaming)
+     |-- Contact form
+     |
+     +-- Agents (LangChain / LangGraph-style tool loop + Gemini)
+     +-- Services (parsers, WeasyPrint PDF, ATS checker)
+     +-- SQLAlchemy models
+     +-- Jinja2 HTML templates for PDF
+
+External services: Gemini API, Tavily (optional), DuckDuckGo fallback, SMTP (optional).
+
+
+3. FOLDER MAP
+-------------
+
+cvboost-ai/
+  run.py                     Run backend from repo root: python run.py
+  to_run.txt                 How the author starts both processes locally
+  .env.example               All environment variables (copy to .env)
+  docker-compose.yml         backend + frontend containers
+  Dockerfile.backend / Dockerfile.frontend
+  Makefile                   install, dev, test, lint, docker, migrations
+  README.md, SECURITY.md, implementation_plan.md
+
+  backend/
+    pyproject.toml           Pinned Python 3.11+ dependencies
+    alembic.ini + migrations/  Schema migrations for production
+    app/
+      main.py                FastAPI app: middleware, routers, /api/health
+      api/v1/                HTTP endpoints
+        auth.py              register, login, logout, refresh, guest, delete me
+        cv.py                CV CRUD, extract, pdf, ats-check, improve-bullet
+        jobs.py              POST /jobs/analyze (SSE)
+        contact.py           POST /contact
+      core/
+        config.py            Pydantic Settings (reads .env)
+        security.py          Argon2, JWT, cookies, SSRF, upload checks, bleach
+        limits.py            slowapi rate limits
+        logging.py           structlog + request IDs
+      models/
+        database.py          async engine, session, init_db()
+        db.py                User, RefreshToken, CVRecord, ContactMessageRecord
+      schemas/cv.py          CVSchema — single source of truth for CV JSON
+      agents/
+        extraction_agent.py  Gemini structured extraction + improve-bullet
+        job_agent.py         Tool-using job requirements agent
+        tools/
+          search_tool.py     Tavily or DuckDuckGo
+          fetch_tool.py      SSRF-safe page fetch
+          skill_normalizer.py Canonical skill names (PowerBI -> Power BI)
+      services/
+        parsers.py           PDF (pdfplumber, PyMuPDF, OCR) and DOCX
+        pdf.py               WeasyPrint renderer
+        ats_checker.py       Heuristic ATS score
+      templates/pdf/         template_sidebar.html, classic, minimal
+      tests/test_all.py      Auth, schema, ATS, SSRF, uploads, mocked agents
+
+  frontend/
+    app.py                   Streamlit entry (also frontend/app/app.py)
+    requirements-frontend.txt  streamlit, httpx, pillow
+    app/pages/1_Landing.py   Tailwind marketing page in an HTML component
+    app/pages/2_Builder.py   Large HTML/JS editor + live preview
+    app/components/
+      api_client.py          httpx calls to FastAPI
+      cv_state.py            session_state["cv"] helpers + sample CV
+    app/styles/theme.py      Shared CSS (teal palette, hide Streamlit chrome)
+
+
+4. HOW TO RUN IT
+----------------
+
+Prerequisites: Python 3.11+, Gemini API key, optional Tavily key.
+
+Copy .env.example to .env and fill GEMINI_API_KEY, JWT_SECRET_KEY, APP_SECRET_KEY.
+
+Docker (recommended):
+  docker compose up --build
+  Frontend: http://localhost:8501
+  API docs: http://localhost:8000/api/docs  (disabled in production)
+
+Local development (two terminals), as in to_run.txt:
+  python run.py
+  python -m streamlit run frontend/app.py --server.port 8501
+
+Makefile equivalents:
+  make env
+  make install
+  make dev-backend
+  make dev-frontend
+  make test
+  make lint
+  make security
+  make docker-up
+
+The frontend talks to http://localhost:8000 by default (API_BASE_URL).
+Inside Docker, API_BASE_URL is set to http://backend:8000.
+
+
+5. DATA MODEL (WHAT A "CV" IS)
+------------------------------
+
+backend/app/schemas/cv.py is the contract used by:
+
+  - Gemini structured output
+  - FastAPI request/response bodies
+  - SQLite/PostgreSQL JSON column (cv_records.data)
+  - PDF Jinja templates
+  - Streamlit session state
+
+Root object: CVSchema
+
+  personal     name, headline, email, phone, address, photo (base64 or path),
+               extras (driving licence, LinkedIn, nationality, custom chips)
+  summary      professional profile text
+  sections_order  list of section keys (profile, education, projects, ...)
+  education    degree, school, dates, bullets, GPA, confidence
+  experience   job title, company, dates, bullets
+  projects     title, role, org, URL, technologies, bullets
+  skills       groups: category + list of skill names
+  languages    name + level (native / advanced / intermediate / basic)
+  certificates name, issuer, date, URL
+  hobbies      list of strings
+  custom_sections  extra titled lists of bullets
+  style        template (sidebar | classic | minimal), font, spacing,
+               photo shape, sidebar position/width, colors, language (en/fr/ar),
+               ats_safe_mode (drops photo, single column)
+
+Related API schemas:
+  JobAnalysisResult   ranked skills with evidence URLs, keywords, languages
+  CVExtractionResult  CV + per-field confidence + warnings
+  ImproveBulletResult original / improved / explanation
+  AtsCheckResult      score, sections found/missing, issues, suggestions
+  ContactMessage      name, email, message, honeypot (must stay empty)
+
+Database tables (SQLAlchemy, created on startup for SQLite):
+
+  users              email, Argon2 hash, guest flag, daily token quota fields,
+                     optional google_id (OAuth fields exist; full OAuth is optional)
+  refresh_tokens     jti, user_id, expires_at, revoked (rotation)
+  cv_records         user_id, title, JSON data, is_draft
+  contact_messages   name, email, message, ip, emailed flag
+
+
+6. BACKEND API
+--------------
+
+Base prefix: /api/v1
+
+Health (no prefix):
+  GET /                 app name, version, docs link
+  GET /api/health       {"status":"ok"} used by Docker healthcheck
+
+Auth  /api/v1/auth
+  POST /register        email + password (min 8 chars), sets httpOnly cookies
+  POST /login           same; rehashes password if Argon2 params changed
+  POST /logout          clears cookies
+  POST /refresh         cookie-only path; old jti revoked, new pair issued
+  GET  /me              current registered user
+  POST /guest           unsigned-DB guest JWT with quota metadata
+  DELETE /me            GDPR delete account + cascade CVs/tokens
+
+CV  /api/v1/cv
+  GET    /              list current user's CVs
+  GET    /{cv_id}       get JSON
+  POST   /              save new CV (registered users)
+  PUT    /{cv_id}       update (owner only)
+  DELETE /{cv_id}       delete
+  GET    /{cv_id}/export-json
+  POST   /extract       upload PDF/DOCX -> parse -> Gemini -> CVExtractionResult
+  POST   /pdf           CVSchema JSON -> WeasyPrint PDF stream
+  POST   /ats-check     upload PDF -> AtsCheckResult
+  POST   /improve-bullet  {bullet, context} -> rewrite
+
+Jobs  /api/v1/jobs
+  POST /analyze         SSE stream:
+                          data: {"type":"progress","message":"..."}
+                          data: {"type":"result","data":{...JobAnalysisResult}}
+                          data: {"type":"error","message":"..."}
+
+Contact  /api/v1/contact
+  POST /                honeypot + sanitize, store, optional SMTP email
+
+Middleware on every request:
+  - Request ID (X-Request-ID)
+  - GZip
+  - CORS (APP_ALLOWED_ORIGINS, credentials allowed)
+  - Security headers (nosniff, DENY frames, Referrer-Policy, CSP, HSTS in prod)
+  - Body size cap 10 MB
+  - Rate limits (default 100/min; AI 10/min; upload 20/min; contact 5/min)
+  - No stack traces returned to clients
+  - OpenAPI docs hidden when APP_ENV=production
+
+
+7. AI AGENTS (HOW THEY REALLY WORK)
+-----------------------------------
+
+7.1 CV Extraction Agent  (backend/app/agents/extraction_agent.py)
+
+  Flow:
+    1. User uploads PDF or DOCX to POST /cv/extract
+    2. File is checked: extension, MIME, magic bytes, size <= 5 MB
+    3. Saved under a UUID filename in UPLOAD_DIR, then always deleted
+    4. parsers.parse_cv_file:
+         PDF: pdfplumber first, then PyMuPDF, then Tesseract OCR (eng+fra+ara)
+         DOCX: python-docx paragraphs + tables
+         PDFs capped at MAX_PDF_PAGES (20)
+    5. Raw text is treated as untrusted:
+         regex strips common injection phrases
+         wrapped in <CV_DOCUMENT> ... </CV_DOCUMENT>
+         truncated to 50,000 characters
+    6. Gemini with_structured_output(CVExtractionResult)
+    7. Frontend loads result into session_state["cv"] and flags fields with
+       confidence < 0.7 for review
+
+  Rules in the system prompt: do not invent facts, ignore embedded commands,
+  preserve original wording, normalize dates to MM/YYYY.
+
+7.2 Improve Bullet  (same file, not a multi-tool agent)
+
+  Rewrites one bullet: strong action verb, no invented metrics, keep meaning.
+  Returns original, improved, explanation. UI is supposed to show a diff and
+  let the user accept or reject.
+
+7.3 Job Requirements Agent  (backend/app/agents/job_agent.py)
+
+  Input: job title/description, optional country, seniority, current skills.
+
+  Tools:
+    web_search       TavilySearchResults or DuckDuckGo
+    fetch_page_tool  httpx GET after DNS + private-IP block
+    normalize_skill  dictionary of canonical names
+
+  Loop:
+    Gemini bind_tools -> execute tools until no more tool_calls
+    Max 10 tool calls, 60 second timeout
+    Results cached 1 hour by MD5 of query|country|seniority
+    Final pass: with_structured_output(JobAnalysisResult)
+    Skills already on the CV are asked to be omitted
+    Unsourced skills should set model_knowledge=true
+
+  Frontend (2_Builder.py analyzeTargetJob) consumes SSE and can add chips
+  to the CV skills list.
+
+7.4 Prompt / LLM safety (also documented in SECURITY.md)
+
+  - Isolation delimiters + schema-only output
+  - bleach on user/HTML-ish text
+  - Jinja2 autoescape for PDFs
+  - Per-user daily token quota field exists (500k in config)
+  - Agents cannot write files, send mail, or touch the DB
+
+
+8. PDF GENERATION AND ATS CHECK
+-------------------------------
+
+pdf.py renders Jinja2 HTML with WeasyPrint:
+
+  template_sidebar.html   left/right colored sidebar (reference layout)
+  template_classic.html   single-column, centered name, section rules
+  template_minimal.html   light typography, letter-spacing headings
+
+Context includes translations EN/FR/AR, RTL for Arabic, spacing presets
+(compact/normal/relaxed), and ATS-safe mode (single column, no photo).
+
+WeasyPrint url_fetcher is custom:
+  allow file:// only inside templates/assets/
+  allow data: URIs for photos
+  block http/https (SSRF)
+
+ats_checker.py is NOT a real applicant-tracking system. It:
+  extracts text with pdfplumber/PyMuPDF
+  looks for section headings in EN/FR/AR
+  looks for email and phone regexes
+  flags garbled characters
+  scores up to 100 (sections, contact, skills, no garbled, reading-order heuristic)
+
+Known limit from README: score is heuristic; guest CVs do not persist on refresh;
+large photos inflate PDF size because they are base64.
+
+
+9. FRONTEND BEHAVIOR
+--------------------
+
+9.1 Entry  frontend/app.py (or frontend/app/app.py)
+
+  Hidden Streamlit navigation:
+    Home     -> 1_Landing.py
+    Builder  -> 2_Builder.py
+  Query ?page=builder switches to the builder.
+
+9.2 Landing  1_Landing.py
+
+  Almost the entire page is a Tailwind CDN HTML document injected with
+  st.components.v1.html. Sections: hero, features, how-it-works, contact.
+
+  "Build my CV" posts a message / sets ?page=builder so Streamlit switches pages.
+
+  Contact form POSTs /api/v1/contact/ with a hidden honeypot field.
+
+  Palette: primary-dark #09637E, primary #088395, accent #7AB2B2, surface #EBF4F6.
+  Font: Inter.
+
+9.3 Builder  2_Builder.py
+
+  This is the main product UI. Streamlit injects a full-height HTML/JS app
+  (CVwizard-style): left editor (~620-680px) and right live paper preview.
+
+  Session CV starts from cv_state._empty_cv() which currently contains a
+  sample CV for Alex Morgan (education, experience, projects, skills).
+
+  Editor capabilities (client-side JS inside the HTML):
+    - Header: CV name, zoom, clear all, cycle template, download
+    - Personal details + extra chips
+    - Photo upload (data URI)
+    - File upload (CV import) — handleFileUpload
+    - Job target textarea -> analyzeTargetJob (SSE)
+    - Summary, education, projects, skills, languages, hobbies
+    - Add custom sections, drag-and-drop section blocks
+    - Live preview re-render (renderLivePreview)
+    - AI helper stubs: suggestAISkills, languages, education, projects,
+      improveAISummary
+
+  api_client.py is the Python-side HTTP wrapper (auth, extract, pdf, ats,
+  improve-bullet, save, contact, SSE job analysis). Some of those calls are
+  used from Streamlit Python; the builder HTML also talks to the backend
+  from JavaScript for interactive flows.
+
+  Theme CSS in theme.py hides Streamlit menu/header/footer so the HTML
+  looks like a standalone product.
+
+
+10. SECURITY (WHAT WAS IMPLEMENTED)
+-----------------------------------
+
+Passwords: Argon2id (64 MB, time_cost=3).
+Tokens: HS256 JWT, access 30 min, refresh 7 days, refresh cookie path-scoped
+        to /api/v1/auth/refresh, rotation + DB revocation.
+Auth extraction: cookie first, then Authorization Bearer.
+Uploads: PDF/DOCX only, magic-byte check, UUID names, delete after extract.
+SSRF: socket.getaddrinfo then block private/loopback/link-local IPs.
+PDF: no external fetches.
+Contact: honeypot, bleach, rate limit 5/min.
+Production: missing GEMINI_API_KEY / short secrets abort startup.
+Docker: non-root user cvboost; WeasyPrint system libs and Tesseract languages
+        (eng, fra, ara) installed in the backend image.
+
+See SECURITY.md for OWASP Top 10 and OWASP LLM Top 10 mapping.
+
+
+11. TESTS
+---------
+
+backend/app/tests/test_all.py covers (among other things):
+
+  - Password hashing
+  - CVSchema validation
+  - ATS check on a tiny constructed PDF
+  - Auth register/login
+  - Upload rejection of bad files
+  - SSRF URL blocking
+  - Agent calls mocked (no real Gemini in unit tests)
+
+Commands:
+  cd backend && pytest app/tests/ -v
+  pytest ... -k "not pdf"   for faster runs without WeasyPrint
+  bandit -r app/ -ll
+  pip-audit
+  ruff check app/
+
+
+12. TYPICAL USER JOURNEY
+------------------------
+
+  1. Start backend and frontend (or docker compose).
+  2. Open http://localhost:8501 — landing page.
+  3. Click Build my CV — builder opens with the sample CV in preview.
+  4. Either edit fields, or upload an existing CV for AI extraction.
+  5. Optionally type a job (e.g. "Data Scientist Morocco") and run analysis;
+     add suggested skills as chips.
+  6. Tweak template/colors/language; enable ATS-safe mode if needed.
+  7. Download PDF (WeasyPrint) or print the HTML preview.
+  8. Optionally register/login so CVs persist in SQLite instead of session only.
+  9. Contact form on the landing page stores a message and may email the author.
+
+
+13. CONFIGURATION CHEAT SHEET
+-----------------------------
+
+From .env.example (do not commit a filled .env):
+
+  APP_ENV, APP_SECRET_KEY, APP_ALLOWED_ORIGINS
+  DATABASE_URL          sqlite+aiosqlite:///./cvboost.db  or PostgreSQL
+  JWT_SECRET_KEY, JWT_ACCESS_EXPIRE_MINUTES, JWT_REFRESH_EXPIRE_DAYS
+  GEMINI_API_KEY, GEMINI_MODEL
+  TAVILY_API_KEY, SEARCH_PROVIDER
+  SMTP_*                optional contact emails
+  UPLOAD_DIR, MAX_UPLOAD_BYTES, MAX_PDF_PAGES
+  RATE_LIMIT_*
+  GOOGLE_CLIENT_ID/SECRET   optional
+  REDIS_URL, CACHE_TTL_SECONDS
+
+Note: config.py default gemini_model is gemini-1.5-flash if the env var is
+missing; .env.example documents gemini-2.5-flash.
+
+
+14. KNOWN LIMITS AND ROADMAP (FROM THE REPO)
+--------------------------------------------
+
+Limits:
+  - Guest sessions do not persist CV after refresh
+  - ATS score is heuristic, not a vendor ATS
+  - WeasyPrint needs Linux libs (Docker handles this; Windows local can be hard)
+  - Photos as base64 increase PDF size
+  - Google OAuth fields exist; full OAuth flow is optional / not the main path
+  - Implementation plan mentioned streamlit-sortables; the builder currently
+    implements drag-and-drop in custom HTML/JS instead
+
+Roadmap listed in README:
+  Job-tailoring match %, cover letter generator, multiple CV versions,
+  LinkedIn import, mentor collaboration.
+
+
+15. FILE-BY-FILE BACKEND NOTES
+------------------------------
+
+main.py            App factory, lifespan init_db, routers, health.
+config.py          All settings + production secret validation.
+security.py        Hashing, JWT, cookies, SSRF, uploads, bleach, honeypot.
+limits.py          slowapi Limiter; memory:// if no Redis.
+logging.py         JSON logs in production, console in development.
+database.py        async engine; SQLite check_same_thread=False.
+db.py              Four ORM tables.
+auth.py            Full auth API including guest and GDPR delete.
+cv.py              CRUD + AI/PDF endpoints; owner-scoped queries.
+jobs.py            SSE wrapper around run_job_agent.
+contact.py         Persist + aiosmtplib if SMTP credentials exist.
+extraction_agent.py Gemini extraction + improve bullet.
+job_agent.py       Tool loop, cache, structured final answer.
+search_tool.py     Tavily else DuckDuckGo else stub list.
+fetch_tool.py      Validate URL, httpx, html2text, 20k char cap.
+skill_normalizer.py Large synonym map + title-case fallback.
+parsers.py         PDF/DOCX/OCR pipeline.
+pdf.py             Jinja + WeasyPrint + safe fetcher.
+ats_checker.py     Regex sections + contact + score.
+templates/pdf/*    Three A4 HTML/CSS layouts.
+tests/test_all.py  Integration-style FastAPI tests.
+
+
+16. SUMMARY IN ONE PARAGRAPH
+----------------------------
+
+CVBoost AI is a FastAPI + Streamlit product that turns CV editing into a
+CVwizard-like web app, uses Gemini to extract CVs and suggest job skills from
+the web, and prints ATS-friendly PDFs with WeasyPrint. The backend is built
+with explicit security (Argon2, JWT cookies, SSRF blocks, upload hardening,
+rate limits). The frontend is mostly custom HTML/CSS/JS hosted inside Streamlit.
+SQLite stores users, CVs, and contact messages. To understand or extend the
+product, start with schemas/cv.py (data), api/v1/*.py (HTTP), the two agents,
+and frontend/app/pages/2_Builder.py (the editor the user actually sees).

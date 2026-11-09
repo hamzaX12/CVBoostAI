@@ -1,0 +1,11 @@
+Step-by-step: how to add ads
+
+Step 1: Build and publish your site.
+It should be live on a real domain, with original content (pages, navigation, a privacy policy page, an about/contact page). Google reviews the quality of the site before approving it.
+
+Step 2: Create an AdSense account.
+Go to https://www.google.com/adsense/start/, click “Get Started” and sign in with your Google account, then enter your site URL. 
+calpoly
+
+Step 3: Connect your site.
+AdSense gives you a script to paste in the <head> of every page. It looks like this (your publisher ID will be different):

@@ -1,0 +1,5 @@
+python -m streamlit run frontend/app.py --server.port 8501
+
+python run.py backend
+
+each one in a terminal

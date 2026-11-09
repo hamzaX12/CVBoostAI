@@ -1,0 +1,17 @@
+# Git ignore
+.env
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.db
+uploads/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+node_modules/
+.DS_Store

@@ -12,12 +12,38 @@ import streamlit as st
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 def _go_to_builder():
-    for p in ["pages/2_Builder.py", "app/pages/2_Builder.py", "2_Builder"]:
+    candidates = [
+        "pages/2_Builder.py",
+        "app/pages/2_Builder.py",
+        os.path.join(os.path.dirname(__file__), "2_Builder.py"),
+        "2_Builder"
+    ]
+    for p in candidates:
         try:
             st.switch_page(p)
             return
         except Exception:
             pass
+
+# Hidden bridge button for parent Streamlit session navigation
+st.markdown("""
+<style>
+.st-key-cta_bridge {
+    position: fixed !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+if st.button("go_builder", key="cta_bridge"):
+    _go_to_builder()
 
 if st.query_params.get("page") == "builder":
     st.query_params.clear()
@@ -95,8 +121,14 @@ if hasattr(st, "html"):
     window.addEventListener("message", function(e) {
       if (e.data === "navigate_to_builder" || (e.data && e.data.type === "navigate_to_builder")) {
         try {
-          const origin = (window.parent && window.parent.location) ? window.parent.location.origin : window.location.origin;
-          window.parent.location.href = origin + '/builder';
+          const btn = window.document.querySelector('.st-key-cta_bridge button');
+          if (btn) {
+            btn.click();
+            return;
+          }
+        } catch (err) {}
+        try {
+          window.top.location.href = '/builder';
         } catch (err) {
           window.location.href = '/builder';
         }
@@ -118,7 +150,6 @@ if hasattr(st, "html"):
     """, unsafe_allow_javascript=True)
 
 
-@st.cache_data
 def get_landing_html() -> str:
     return """<!DOCTYPE html>
 <html lang="en">
@@ -489,17 +520,26 @@ def get_landing_html() -> str:
 <script>
 function navigateToBuilder(e) {
   if (e && e.preventDefault) e.preventDefault();
+  // Click hidden bridge button in parent Streamlit window to trigger st.switch_page
   try {
-    const origin = (window.parent && window.parent.location) ? window.parent.location.origin : window.location.origin;
-    window.parent.location.href = origin + '/builder';
-    return;
+    const btn = window.parent.document.querySelector('.st-key-cta_bridge button');
+    if (btn) {
+      btn.click();
+      return;
+    }
   } catch (err) {}
   try {
-    const origin = (window.top && window.top.location) ? window.top.location.origin : window.location.origin;
-    window.top.location.href = origin + '/builder';
+    const btn = window.top.document.querySelector('.st-key-cta_bridge button');
+    if (btn) {
+      btn.click();
+      return;
+    }
+  } catch (err) {}
+  try {
+    window.parent.postMessage('navigate_to_builder', '*');
     return;
   } catch (err) {}
-  window.location.href = '/builder';
+  window.top.location.href = '/builder';
 }
 
 function submitContact(e) {

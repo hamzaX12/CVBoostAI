@@ -19,12 +19,61 @@ import components.cv_state
 importlib.reload(components.cv_state)
 from components.cv_state import init_cv_state, get_cv, _empty_cv
 
-st.set_page_config(
-    page_title="CVBoost AI — Resume Builder",
-    page_icon="📄",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+try:
+    st.set_page_config(
+        page_title="CVBoost AI — Resume Builder",
+        page_icon="📄",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
+except Exception:
+    pass
+
+def _go_to_landing():
+    candidates = [
+        "pages/1_Landing.py",
+        "app/pages/1_Landing.py",
+        os.path.join(os.path.dirname(__file__), "1_Landing.py"),
+        "1_Landing"
+    ]
+    for p in candidates:
+        try:
+            st.switch_page(p)
+            return
+        except Exception:
+            pass
+
+# Hidden bridge button for returning to home/landing
+st.markdown("""
+<style>
+.st-key-home_bridge {
+    position: fixed !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+if st.button("go_home", key="home_bridge"):
+    _go_to_landing()
+
+if hasattr(st, "html"):
+    st.html("""
+    <script>
+    window.addEventListener("message", function(e) {
+      if (e.data === "navigate_to_landing" || (e.data && e.data.type === "navigate_to_landing")) {
+        const btn = window.document.querySelector('.st-key-home_bridge button');
+        if (btn) btn.click();
+      }
+    });
+    </script>
+    """, unsafe_allow_javascript=True)
 
 st.markdown(HIDE_STREAMLIT, unsafe_allow_html=True)
 st.markdown("""
@@ -197,13 +246,13 @@ builder_html = f"""<!DOCTYPE html>
 
   <!-- BEGIN: ApplicationTopNav -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-40 px-4 lg:px-8 py-2.5 flex items-center justify-between flex-shrink-0" data-purpose="app-header">
-    <!-- Left Navigation: Back to CVs -->
+    <!-- Left Navigation: Back to Home -->
     <div class="flex items-center space-x-2">
-      <button onclick="navigateToLanding()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 border border-gray-200 hover:border-gray-400 rounded-lg text-xs md:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition" title="Back to CVs">
+      <button onclick="navigateToLanding()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 border border-gray-200 hover:border-gray-400 rounded-lg text-xs md:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition" title="Back to Home">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
-        <span>CVs</span>
+        <span>Home</span>
       </button>
     </div>
 
@@ -3953,14 +4002,27 @@ builder_html = f"""<!DOCTYPE html>
 
     function navigateToLanding() {{
       try {{
-        const origin = window.parent.location.origin;
-        window.parent.location.href = origin + '/';
-      }} catch (e) {{
-        try {{
-          window.top.location.href = '/';
-        }} catch (e2) {{
-          window.location.href = '/';
+        const btn = window.parent.document.querySelector('.st-key-home_bridge button');
+        if (btn) {{
+          btn.click();
+          return;
         }}
+      }} catch (e) {{}}
+      try {{
+        const btn = window.top.document.querySelector('.st-key-home_bridge button');
+        if (btn) {{
+          btn.click();
+          return;
+        }}
+      }} catch (e) {{}}
+      try {{
+        window.parent.postMessage('navigate_to_landing', '*');
+        return;
+      }} catch (e) {{}}
+      try {{
+        window.top.location.href = '/';
+      }} catch (e) {{
+        window.location.href = '/';
       }}
     }}
 

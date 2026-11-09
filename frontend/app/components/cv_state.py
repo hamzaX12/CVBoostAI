@@ -243,7 +243,7 @@ def _empty_cv() -> dict:
         "hobbies": ["Open Source Contributing", "Marathon Running", "Astrophotography", "Chess"],
         "custom_sections": [],
         "style": {
-            "template": "simple",
+            "template": "sidebar",
             "font": "Inter",
             "spacing": "normal",
             "photo_shape": "circle",

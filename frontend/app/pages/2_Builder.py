@@ -153,6 +153,8 @@ if any(k in raw_str for k in ["hamza", "ben allou", "benallou", "safi", "devo so
     st.session_state["cv"] = _empty_cv()
     cv = get_cv()
 
+if isinstance(cv.get("style"), dict) and cv["style"].get("template") == "simple":
+    cv["style"]["template"] = "sidebar"
 cv_json = json.dumps(cv, ensure_ascii=False)
 sample_cv_json = json.dumps(_empty_cv(), ensure_ascii=False)
 
@@ -279,10 +281,10 @@ builder_html = f"""<!DOCTYPE html>
       </button>
       <!-- 3 TEMPLATES: Simple | Classic Navy | Executive Slate -->
       <div class="flex items-center space-x-1 border border-gray-200 rounded-lg p-0.5 bg-gray-50 text-xs">
-        <button type="button" onclick="selectTemplate('simple')" id="tplBtnSimple" class="px-2.5 py-1 rounded-md font-semibold transition bg-white text-blue-700 shadow-xs" title="Simple Template (Sebastian Bennett Style)">
+        <button type="button" onclick="selectTemplate('simple')" id="tplBtnSimple" class="px-2.5 py-1 rounded-md font-semibold transition text-gray-600 hover:text-gray-900" title="Simple Template (Sebastian Bennett Style)">
           Simple
         </button>
-        <button type="button" onclick="selectTemplate('classic')" id="tplBtnClassic" class="px-2.5 py-1 rounded-md font-semibold transition text-gray-600 hover:text-gray-900" title="Classic Navy Template">
+        <button type="button" onclick="selectTemplate('classic')" id="tplBtnClassic" class="px-2.5 py-1 rounded-md font-semibold transition bg-white text-blue-700 shadow-xs" title="Classic Navy Template">
           Classic Navy
         </button>
         <button type="button" onclick="selectTemplate('executive')" id="tplBtnExecutive" class="px-2.5 py-1 rounded-md font-semibold transition text-gray-600 hover:text-gray-900" title="Executive Slate Template (Laura G. Levell Style)">
@@ -814,11 +816,11 @@ builder_html = f"""<!DOCTYPE html>
                 style="width:100%;height:100%;object-fit:cover;display:block;" alt="Profile photo" />
             </div>
             <!-- Surname big -->
-            <div id="previewLastName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;">MORGAN</div>
+            <div id="previewLastName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;"></div>
             <!-- First name big -->
-            <div id="previewFirstName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;">ALEX</div>
+            <div id="previewFirstName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;"></div>
             <!-- Title -->
-            <div id="previewHeadline" style="font-size:7.5px;font-weight:400;letter-spacing:0.1em;color:#CBD5E1;margin-top:6px;text-transform:uppercase;">SENIOR DATA SCIENTIST</div>
+            <div id="previewHeadline" style="font-size:7.5px;font-weight:400;letter-spacing:0.1em;color:#CBD5E1;margin-top:6px;text-transform:uppercase;"></div>
           </div>
 
           <!-- Separator line -->
@@ -890,7 +892,7 @@ builder_html = f"""<!DOCTYPE html>
     const cvData = {cv_json};
     const SAMPLE_CV_DATA = {sample_cv_json};
     const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='%2394A3B8'><circle cx='32' cy='24' r='14'/><path d='M10 56c0-11 10-18 22-18s22 7 22 18z'/></svg>";
-    let currentTemplate = 'simple'; // 'simple', 'classic' or 'executive'
+    let currentTemplate = 'classic'; // 'simple', 'classic' or 'executive'
     let currentZoom = 100;
     let isCvNameCustomEdited = false;
 
@@ -965,7 +967,7 @@ builder_html = f"""<!DOCTYPE html>
       if (cvData.style && cvData.style.template) {{
         selectTemplate(cvData.style.template);
       }} else {{
-        selectTemplate('simple');
+        selectTemplate('classic');
       }}
 
       renderSkillsList();
@@ -2279,9 +2281,10 @@ builder_html = f"""<!DOCTYPE html>
       sheet.innerHTML = `
         <!-- HEADER (Sebastian Bennett style) -->
         <div style="text-align:center;margin-bottom:18px;">
+          ${{fullName ? `
           <div style="font-size:26px;font-weight:800;letter-spacing:0.08em;color:#111827;text-transform:uppercase;line-height:1.15;margin-bottom:4px;">
-            ${{fullName || 'SEBASTIAN BENNETT'}}
-          </div>
+            ${{fullName}}
+          </div>` : ''}}
           ${{headline ? `<div style="font-size:13px;font-weight:400;color:#374151;margin-bottom:12px;letter-spacing:0.02em;">${{headline}}</div>` : ''}}
           ${{contactItems.length > 0 ? `
             <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:18px;font-size:8.5px;color:#374151;">
@@ -2765,9 +2768,9 @@ builder_html = f"""<!DOCTYPE html>
               <div id="previewPhotoContainer" style="margin:0 auto 12px auto;width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid rgba(203,213,225,0.4);background:#2D4A6B;flex-shrink:0;">
                 <img id="previewPhoto" src="" style="width:100%;height:100%;object-fit:cover;display:block;" alt="Profile photo" />
               </div>
-              <div id="previewLastName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;">MORGAN</div>
-              <div id="previewFirstName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;">ALEX</div>
-              <div id="previewHeadline" style="font-size:7.5px;font-weight:400;letter-spacing:0.1em;color:#CBD5E1;margin-top:6px;text-transform:uppercase;">SENIOR DATA SCIENTIST</div>
+              <div id="previewLastName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;"></div>
+              <div id="previewFirstName" style="font-size:18px;font-weight:900;letter-spacing:0.04em;line-height:1.15;color:#fff;text-transform:uppercase;"></div>
+              <div id="previewHeadline" style="font-size:7.5px;font-weight:400;letter-spacing:0.1em;color:#CBD5E1;margin-top:6px;text-transform:uppercase;"></div>
             </div>
             <div style="height:1px;background:rgba(203,213,225,0.3);margin:0 20px;"></div>
             <div style="padding:16px 20px 14px 20px;">
@@ -2814,8 +2817,8 @@ builder_html = f"""<!DOCTYPE html>
       ensureClassicNavyDom(sheet);
 
       const p = cvData.personal || {{}};
-      const lastName  = (p.last_name !== undefined ? p.last_name : 'MORGAN').toUpperCase();
-      const firstName = (p.first_name !== undefined ? p.first_name : 'ALEX').toUpperCase();
+      const lastName  = (p.last_name || '').toUpperCase();
+      const firstName = (p.first_name || '').toUpperCase();
 
       // Dynamic Profile Photo (placeholder shown when no image is uploaded)
       const photoEl = document.getElementById('previewPhoto');
@@ -2831,8 +2834,8 @@ builder_html = f"""<!DOCTYPE html>
       // Sidebar name
       const lnEl = document.getElementById('previewLastName');
       const fnEl = document.getElementById('previewFirstName');
-      if (lnEl) lnEl.textContent = lastName || (firstName ? '' : 'LAST NAME');
-      if (fnEl) fnEl.textContent = firstName || (lastName ? '' : 'FIRST NAME');
+      if (lnEl) lnEl.textContent = lastName;
+      if (fnEl) fnEl.textContent = firstName;
 
       // Headline / title
       const headlineEl = document.getElementById('previewHeadline');
@@ -3537,11 +3540,19 @@ builder_html = f"""<!DOCTYPE html>
         date_of_birth: '',
         photo_url: '',
         linkedin: '',
+        website: '',
+        driving_licence: '',
+        place_of_birth: '',
+        gender: '',
+        nationality: '',
+        marital_status: '',
         extras: []
       }};
       cvData.summary = '';
       cvData.target_job = '';
       cvData.cv_name = 'CV Untitled';
+      cvData.experience = [];
+      cvData.certificates = [];
       cvData.skills = [];
       cvData.ai_skill_names = [];
       cvData.languages = [];
@@ -3569,6 +3580,9 @@ builder_html = f"""<!DOCTYPE html>
 
       const tj = document.getElementById('targetJobInput');
       if (tj) tj.value = '';
+
+      const pasteArea = document.getElementById('pasteCvTextarea');
+      if (pasteArea) pasteArea.value = '';
 
       const headerNameInput = document.getElementById('cvNameHeaderInput');
       if (headerNameInput) headerNameInput.value = 'CV Untitled';

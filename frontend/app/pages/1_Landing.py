@@ -560,7 +560,8 @@ function submitContact(e) {
     honeypot: honeypot,
   };
 
-  fetch('/api/v1/contact/', {
+  const apiUrl = (window.location.port === '8501') ? 'http://localhost:8000/api/v1/contact/' : '/api/v1/contact/';
+  fetch(apiUrl, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(data),
